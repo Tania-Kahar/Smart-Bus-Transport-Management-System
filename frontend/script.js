@@ -470,3 +470,104 @@ cancelBookingForm.addEventListener("submit", async (event) => {
         submitButton.disabled = false;
     }
 });
+
+
+/* SMARTBUS - SEARCH BUSES */
+
+const searchButton = document.getElementById("searchBuses");
+const searchMessage = document.getElementById("searchMessage");
+
+searchButton.addEventListener("click", async () => {
+    const from = document.getElementById("searchFrom").value.trim().toLowerCase();
+    const to = document.getElementById("searchTo").value.trim().toLowerCase();
+    const date = document.getElementById("journeyDate").value;
+
+    if (!from || !to || !date) {
+        searchMessage.textContent = "Please enter From, To and Journey Date.";
+        return;
+    }
+
+    searchMessage.textContent = "Searching buses...";
+
+    try {
+        const response = await fetch("/schedules");
+
+        if (!response.ok) {
+            throw new Error("Unable to retrieve schedules.");
+        }
+
+        const schedules = await response.json();
+
+        const results = schedules.filter(schedule => {
+            const source = String(schedule.source || "").trim().toLowerCase();
+            const destination = String(schedule.destination || "").trim().toLowerCase();
+            const departure = String(schedule.departure_time || "");
+
+            return source === from &&
+                   destination === to &&
+                   departure.startsWith(date);
+        });
+
+        const scheduleContainer = document.getElementById("scheduleContainer");
+        scheduleContainer.innerHTML = "";
+
+        if (results.length === 0) {
+            searchMessage.textContent = "No buses found for this route and date.";
+            return;
+        }
+
+        results.forEach(schedule => {
+            const card = document.createElement("div");
+            card.className = "schedule-card";
+
+            const title = document.createElement("h3");
+            title.textContent = `${schedule.source} → ${schedule.destination}`;
+
+            const details = [
+                `Bus: ${schedule.bus_number}`,
+                `Type: ${schedule.bus_type}`,
+                `Departure: ${schedule.departure_time}`,
+                `Arrival: ${schedule.arrival_time}`,
+                `Fare: ₹${schedule.fare}`
+            ];
+
+            card.appendChild(title);
+
+            details.forEach(detail => {
+                const p = document.createElement("p");
+                p.textContent = detail;
+                card.appendChild(p);
+            });
+
+            scheduleContainer.appendChild(card);
+        });
+
+        searchMessage.textContent = `${results.length} bus schedule(s) found.`;
+
+        document.querySelector(".schedules-section").scrollIntoView({
+            behavior: "smooth"
+        });
+
+    } catch (error) {
+        searchMessage.textContent = "Unable to search buses. Check the Flask server.";
+        console.error(error);
+    }
+});
+
+
+/* STEP 11 - SWAP FROM AND TO */
+
+const swapButton = document.getElementById("swapLocations");
+
+if (swapButton) {
+    swapButton.addEventListener("click", function () {
+        const fromInput = document.getElementById("searchFrom");
+        const toInput = document.getElementById("searchTo");
+
+        const temporaryValue = fromInput.value;
+
+        fromInput.value = toInput.value;
+        toInput.value = temporaryValue;
+    });
+}
+
